@@ -167,19 +167,23 @@ int status_cb(const char *path, unsigned int flags, void *payload) {
                  GIT_STATUS_INDEX_MODIFIED |
                  GIT_STATUS_INDEX_DELETED |
                  GIT_STATUS_INDEX_RENAMED |
-                 GIT_STATUS_INDEX_TYPECHANGE))
-    {
+                 GIT_STATUS_INDEX_TYPECHANGE)) {
         status->staged++;
-    } else if (flags & GIT_STATUS_CONFLICTED) {
+    } 
+
+    if (flags & GIT_STATUS_CONFLICTED) {
         status->conflicts++;
         status->changed++;
-    } else if (flags & (GIT_STATUS_WT_MODIFIED |
+    }
+
+    if (flags & (GIT_STATUS_WT_MODIFIED |
                         GIT_STATUS_WT_DELETED |
                         GIT_STATUS_WT_RENAMED |
-                        GIT_STATUS_WT_TYPECHANGE))
-    {
+                        GIT_STATUS_WT_TYPECHANGE)) {
         status->changed++;
-    } else if (flags & GIT_STATUS_WT_NEW) {
+    }
+
+    if (flags & GIT_STATUS_WT_NEW) {
         status->untracked++;
     }
 
