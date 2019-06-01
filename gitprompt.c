@@ -1,44 +1,47 @@
-// Copyright © 2017 Zandr Martin
+/* Copyright © 2017 Zandr Martin
+   Copyright © 2019 Mario Aichinger <aichingm@gmailcom>
 
-// Permission is hereby granted, free of charge, to any person obtaining
-// a copy of this software and associated documentation files (the "Software"),
-// to deal in the Software without restriction, including without limitation
-// the rights to use, copy, modify, merge, publish, distribute, sublicense,
-// and/or sell copies of the Software, and to permit persons to whom the
-// Software is furnished to do so, subject to the following conditions:
+   Permission is hereby granted, free of charge, to any person obtaining
+   a copy of this software and associated documentation files (the "Software"),
+   to deal in the Software without restriction, including without limitation
+   the rights to use, copy, modify, merge, publish, distribute, sublicense,
+   and/or sell copies of the Software, and to permit persons to whom the
+   Software is furnished to do so, subject to the following conditions:
 
-// The above copyright notice and this permission notice shall be included
-// in all copies or substantial portions of the Software.
+   The above copyright notice and this permission notice shall be included
+   in all copies or substantial portions of the Software.
 
-// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
-// EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
-// OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
-// IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
-// DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
-// TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE
-// OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+   EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+   OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+   IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+   DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+   TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE
+   OR THE USE OR OTHER DEALINGS IN THE SOFTWARE. */
 #include <git2.h>
 #include <string.h>
 #include <stdio.h>
 
-// --- raw ansi colors --------------------------------
-// #define COLOR_BLACK        "\x1b[30m"
-// #define COLOR_RED          "\x1b[31m"
-// #define COLOR_GREEN        "\x1b[32m"
-// #define COLOR_YELLOW       "\x1b[33m"
-// #define COLOR_BLUE         "\x1b[34m"
-// #define COLOR_MAGENTA      "\x1b[35m"
-// #define COLOR_CYAN         "\x1b[36m"
-// #define COLOR_BLACK_BOLD   "\x1b[30;1m"
-// #define COLOR_RED_BOLD     "\x1b[31;1m"
-// #define COLOR_GREEN_BOLD   "\x1b[32;1m"
-// #define COLOR_YELLOW_BOLD  "\x1b[33;1m"
-// #define COLOR_BLUE_BOLD    "\x1b[34;1m"
-// #define COLOR_MAGENTA_BOLD "\x1b[35;1m"
-// #define COLOR_CYAN_BOLD    "\x1b[36;1m"
-// #define COLOR_RESET        "\x1b[0m"
+/* --- raw ansi colors -------------------------------- */
+/*
+   #define COLOR_BLACK        "\x1b[30m"
+   #define COLOR_RED          "\x1b[31m"
+   #define COLOR_GREEN        "\x1b[32m"
+   #define COLOR_YELLOW       "\x1b[33m"
+   #define COLOR_BLUE         "\x1b[34m"
+   #define COLOR_MAGENTA      "\x1b[35m"
+   #define COLOR_CYAN         "\x1b[36m"
+   #define COLOR_BLACK_BOLD   "\x1b[30;1m"
+   #define COLOR_RED_BOLD     "\x1b[31;1m"
+   #define COLOR_GREEN_BOLD   "\x1b[32;1m"
+   #define COLOR_YELLOW_BOLD  "\x1b[33;1m"
+   #define COLOR_BLUE_BOLD    "\x1b[34;1m"
+   #define COLOR_MAGENTA_BOLD "\x1b[35;1m"
+   #define COLOR_CYAN_BOLD    "\x1b[36;1m"
+   #define COLOR_RESET        "\x1b[0m"
+*/
 
-// --- zsh specific color formatting ------------------
+/* --- zsh specific color formatting ------------------ */
 #define COLOR_BLACK_BOLD   "%%{\x1b[30;1m%%}"
 #define COLOR_RED_BOLD     "%%{\x1b[31;1m%%}"
 #define COLOR_GREEN_BOLD   "%%{\x1b[32;1m%%}"
@@ -48,7 +51,7 @@
 #define COLOR_CYAN_BOLD    "%%{\x1b[36;1m%%}"
 #define COLOR_RESET        "%%{\x1b[0m%%}"
 
-// --- config section ---------------------------------
+/* --- config section --------------------------------- */
 #define STATUS_PREFIX "["
 #define STATUS_SUFFIX "]"
 #define STATUS_SEPARATOR "|"
@@ -67,7 +70,10 @@
 #define UNTRACKED_SYMBOL "_"
 #define CLEAN_COLOR COLOR_GREEN_BOLD
 #define CLEAN_SYMBOL "="
-// --- end config section -----------------------------
+/* --- end config section ----------------------------- */
+
+
+#define psize_t(x) ((unsigned long) x)
 
 struct status_counts {
     size_t untracked;
@@ -77,7 +83,9 @@ struct status_counts {
 };
 
 int branch_name(git_repository *repo, char *name) {
+
     git_reference *ref;
+  
     if (git_reference_lookup(&ref, repo, "HEAD") != 0) {
         if (git_repository_head(&ref, repo) != 0) {
             git_reference_free(ref);
@@ -111,10 +119,15 @@ int branch_name(git_repository *repo, char *name) {
 }
 
 int ahead_behind(git_repository *repo, size_t *ahead, size_t *behind) {
+
+    const git_oid *loc_id;
+    const git_oid *upst_id;
+    git_reference *local = NULL;
+    git_reference *upstream = NULL;
+
     *ahead = 0;
     *behind = 0;
 
-    git_reference *local = NULL;
     if (git_repository_head(&local, repo) != 0) {
         if (local != NULL) {
             git_reference_free(local);
@@ -122,7 +135,6 @@ int ahead_behind(git_repository *repo, size_t *ahead, size_t *behind) {
         return 1;
     }
 
-    git_reference *upstream = NULL;
     if (git_branch_upstream(&upstream, local) != 0) {
         git_reference_free(local);
         if (upstream != NULL) {
@@ -131,7 +143,6 @@ int ahead_behind(git_repository *repo, size_t *ahead, size_t *behind) {
         return 1;
     }
 
-    const git_oid *loc_id, *upst_id;
     loc_id = git_reference_target(local);
     upst_id = git_reference_target(upstream);
 
@@ -143,6 +154,7 @@ int ahead_behind(git_repository *repo, size_t *ahead, size_t *behind) {
 }
 
 int status_cb(const char *path, unsigned int flags, void *payload) {
+
     struct status_counts *status = (struct status_counts *)payload;
 
     if (flags & GIT_STATUS_IGNORED) {
@@ -173,9 +185,22 @@ int status_cb(const char *path, unsigned int flags, void *payload) {
 }
 
 int main() {
-    git_libgit2_init();
+
+    size_t ahead;
+    size_t behind;
+    char name[256];
+    git_buf *buf;
     git_repository *repo = NULL;
-    git_buf *buf = calloc(1, sizeof(git_buf));
+
+    struct status_counts status;
+    status.untracked = 0;
+    status.conflicts = 0;
+    status.changed = 0;
+    status.staged = 0;
+
+    buf = calloc(1, sizeof(git_buf));
+
+    git_libgit2_init();
 
     if (git_repository_discover(buf, ".", 1, "/") != 0) {
         goto cleanup;
@@ -185,19 +210,11 @@ int main() {
         goto cleanup;
     }
 
-    struct status_counts status = {
-        .untracked = 0,
-        .conflicts = 0,
-        .changed = 0,
-        .staged = 0
-    };
 
     git_status_foreach(repo, status_cb, &status);
 
-    size_t ahead, behind;
     ahead_behind(repo, &ahead, &behind);
 
-    char name[256];
     if (branch_name(repo, name) != 0) {
         goto cleanup;
     }
@@ -205,29 +222,29 @@ int main() {
     printf(STATUS_PREFIX BRANCH_NAME_COLOR "%s" COLOR_RESET, name);
 
     if (behind > 0) {
-        printf(BEHIND_COLOR BEHIND_SYMBOL "%zd" COLOR_RESET, behind);
+        printf(BEHIND_COLOR BEHIND_SYMBOL "%ld" COLOR_RESET, psize_t(behind));
     }
 
     if (ahead > 0) {
-        printf(AHEAD_COLOR AHEAD_SYMBOL "%zd" COLOR_RESET, ahead);
+        printf(AHEAD_COLOR AHEAD_SYMBOL "%ld" COLOR_RESET, psize_t(ahead));
     }
 
     printf(STATUS_SEPARATOR);
 
     if (status.staged > 0) {
-        printf(STAGED_COLOR STAGED_SYMBOL "%zd" COLOR_RESET, status.staged);
+        printf(STAGED_COLOR STAGED_SYMBOL "%ld" COLOR_RESET, psize_t(status.staged));
     }
 
     if (status.conflicts > 0) {
-        printf(CONFLICTS_COLOR CONFLICTS_SYMBOL "%zd" COLOR_RESET, status.conflicts);
+        printf(CONFLICTS_COLOR CONFLICTS_SYMBOL "%ld" COLOR_RESET, psize_t(status.conflicts));
     }
 
     if (status.changed > 0) {
-        printf(CHANGED_COLOR CHANGED_SYMBOL "%zd" COLOR_RESET, status.changed);
+        printf(CHANGED_COLOR CHANGED_SYMBOL "%ld" COLOR_RESET, psize_t(status.changed));
     }
 
     if (status.untracked > 0) {
-        printf(UNTRACKED_COLOR UNTRACKED_SYMBOL "%zd" COLOR_RESET, status.untracked);
+        printf(UNTRACKED_COLOR UNTRACKED_SYMBOL "%ld" COLOR_RESET, psize_t(status.untracked));
     }
 
     if ((status.staged + status.conflicts + status.changed + status.untracked) == 0) {
