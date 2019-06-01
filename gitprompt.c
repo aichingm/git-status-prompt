@@ -74,6 +74,7 @@
 
 
 #define psize_t(x) ((unsigned long) x)
+#define BRANCH_NAME_LEN 256
 
 struct status_counts {
     size_t untracked;
@@ -111,7 +112,8 @@ int branch_name(git_repository *repo, char *name) {
         const char *tmp = git_reference_symbolic_target(ref);
 
         if (strchr(tmp, '/')) {
-            strcpy(name, strrchr(tmp, '/') + 1);
+            strncpy(name, strrchr(tmp, '/') + 1, BRANCH_NAME_LEN - 1);
+            name[BRANCH_NAME_LEN - 1] = '\0';
         }
     }
 
@@ -188,7 +190,7 @@ int main() {
 
     size_t ahead;
     size_t behind;
-    char name[256];
+    char name[BRANCH_NAME_LEN];
     git_buf *buf;
     git_repository *repo = NULL;
 
