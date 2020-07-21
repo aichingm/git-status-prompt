@@ -1,5 +1,5 @@
 /* Copyright © 2017 Zandr Martin
-   Copyright © 2019 Mario Aichinger <aichingm@gmailcom>
+   Copyright © 2019-2020 Mario Aichinger <aichingm@gmailcom>
 
    Permission is hereby granted, free of charge, to any person obtaining
    a copy of this software and associated documentation files (the "Software"),
@@ -49,27 +49,28 @@
 #define COLOR_BLUE_BOLD    "%%{\x1b[34;1m%%}"
 #define COLOR_MAGENTA_BOLD "%%{\x1b[35;1m%%}"
 #define COLOR_CYAN_BOLD    "%%{\x1b[36;1m%%}"
+#define COLOR_WHITE_BOLD   "%%{\x1b[37;1m%%}"
 #define COLOR_RESET        "%%{\x1b[0m%%}"
 
 /* --- config section --------------------------------- */
-#define STATUS_PREFIX "["
-#define STATUS_SUFFIX "]"
+#define STATUS_PREFIX "("
+#define STATUS_SUFFIX ")"
 #define STATUS_SEPARATOR "|"
-#define BRANCH_NAME_COLOR COLOR_BLACK_BOLD
-#define STAGED_COLOR COLOR_YELLOW_BOLD
-#define STAGED_SYMBOL "-"
-#define CONFLICTS_COLOR COLOR_RED_BOLD
-#define CONFLICTS_SYMBOL "!"
+#define BRANCH_NAME_COLOR COLOR_MAGENTA_BOLD
+#define STAGED_COLOR COLOR_RED_BOLD
+#define STAGED_SYMBOL "●"
+#define CONFLICTS_COLOR COLOR_YELLOW_BOLD
+#define CONFLICTS_SYMBOL "⭍"
 #define CHANGED_COLOR COLOR_BLUE_BOLD
-#define CHANGED_SYMBOL "+"
+#define CHANGED_SYMBOL "✚"
 #define BEHIND_COLOR COLOR_RED_BOLD
-#define BEHIND_SYMBOL "<"
+#define BEHIND_SYMBOL "↓"
 #define AHEAD_COLOR COLOR_CYAN_BOLD
-#define AHEAD_SYMBOL ">"
-#define UNTRACKED_COLOR COLOR_MAGENTA_BOLD
-#define UNTRACKED_SYMBOL "_"
+#define AHEAD_SYMBOL "↑"
+#define UNTRACKED_COLOR COLOR_WHITE_BOLD
+#define UNTRACKED_SYMBOL "…"
 #define CLEAN_COLOR COLOR_GREEN_BOLD
-#define CLEAN_SYMBOL "="
+#define CLEAN_SYMBOL "✔"
 /* --- end config section ----------------------------- */
 
 
@@ -86,7 +87,7 @@ struct status_counts {
 int branch_name(git_repository *repo, char *name) {
 
     git_reference *ref;
-  
+
     if (git_reference_lookup(&ref, repo, "HEAD") != 0) {
         if (git_repository_head(&ref, repo) != 0) {
             git_reference_free(ref);
@@ -162,6 +163,22 @@ int status_cb(const char *path, unsigned int flags, void *payload) {
     if (flags & GIT_STATUS_IGNORED) {
         return 0;
     }
+     /*printf("%s\n", path);*/
+    /*printf("%s delta_no_mod %d, current %d, conflict %d, i_new %d, i_mod %d, i_del%d, i_ren %d, i_typ %d, w_mod %d, w_del %d, w_ren %d,  w_typ %d\n",
+        path,
+        (flags & GIT_DELTA_UNMODIFIED)>=1,
+        (flags == GIT_STATUS_CURRENT),
+        (flags & GIT_STATUS_CONFLICTED)>=1,
+        (flags&GIT_STATUS_INDEX_NEW)>=1,
+        (flags&GIT_STATUS_INDEX_MODIFIED)>=1,
+        (flags&GIT_STATUS_INDEX_DELETED)>=1,
+        (flags&GIT_STATUS_INDEX_RENAMED)>=1,
+        (flags&GIT_STATUS_INDEX_TYPECHANGE)>=1,
+        (flags&GIT_STATUS_WT_MODIFIED)>=1,
+        (flags&GIT_STATUS_WT_DELETED)>=1,
+        (flags&GIT_STATUS_WT_RENAMED)>=1,
+        (flags&GIT_STATUS_WT_TYPECHANGE)>=1
+    );*/
 
     if (flags & (GIT_STATUS_INDEX_NEW |
                  GIT_STATUS_INDEX_MODIFIED |
@@ -169,17 +186,18 @@ int status_cb(const char *path, unsigned int flags, void *payload) {
                  GIT_STATUS_INDEX_RENAMED |
                  GIT_STATUS_INDEX_TYPECHANGE)) {
         status->staged++;
-    } 
+    }
 
     if (flags & GIT_STATUS_CONFLICTED) {
         status->conflicts++;
         status->changed++;
     }
 
-    if (flags & (GIT_STATUS_WT_MODIFIED |
-                        GIT_STATUS_WT_DELETED |
-                        GIT_STATUS_WT_RENAMED |
-                        GIT_STATUS_WT_TYPECHANGE)) {
+    if (flags & (
+        GIT_STATUS_WT_MODIFIED |
+        GIT_STATUS_WT_DELETED |
+        GIT_STATUS_WT_RENAMED |
+        GIT_STATUS_WT_TYPECHANGE)) {
         status->changed++;
     }
 
@@ -195,8 +213,9 @@ int main() {
     size_t ahead;
     size_t behind;
     char name[BRANCH_NAME_LEN];
-    git_buf *buf;
+    git_buf buf = {0};
     git_repository *repo = NULL;
+    git_status_options opts = GIT_STATUS_OPTIONS_INIT;
 
     struct status_counts status;
     status.untracked = 0;
@@ -204,20 +223,23 @@ int main() {
     status.changed = 0;
     status.staged = 0;
 
-    buf = calloc(1, sizeof(git_buf));
 
     git_libgit2_init();
 
-    if (git_repository_discover(buf, ".", 1, "/") != 0) {
+    if (git_repository_discover(&buf, ".", 1, "/") != 0) {
         goto cleanup;
     }
 
-    if (git_repository_open(&repo, buf->ptr) != 0) {
+    if (git_repository_open(&repo, (&buf)->ptr) != 0) {
         goto cleanup;
     }
-
-
-    git_status_foreach(repo, status_cb, &status);
+    /* check https://github.com/libgit2/libgit2/blob/master/tests/status/renames.c#L571 for list of options */
+    opts.flags |= GIT_STATUS_OPT_RENAMES_HEAD_TO_INDEX;
+    opts.flags |= GIT_STATUS_OPT_RENAMES_INDEX_TO_WORKDIR;
+    opts.flags |= GIT_STATUS_OPT_RENAMES_FROM_REWRITES;
+    opts.flags |= GIT_STATUS_OPT_INCLUDE_UNTRACKED;
+    opts.flags |= GIT_STATUS_OPT_RECURSE_UNTRACKED_DIRS;
+    git_status_foreach_ext(repo, &opts, status_cb, &status);
 
     ahead_behind(repo, &ahead, &behind);
 
@@ -260,7 +282,7 @@ int main() {
     printf(STATUS_SUFFIX "\n");
 
 cleanup:
-    git_buf_free(buf);
+    git_buf_free(&buf);
     git_repository_free(repo);
     git_libgit2_shutdown();
     return 0;
