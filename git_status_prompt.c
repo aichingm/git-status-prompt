@@ -180,6 +180,21 @@ int status_cb(const char *path, unsigned int flags, void *payload) {
         (flags&GIT_STATUS_WT_TYPECHANGE)>=1
     );*/
 
+    /*printf("%s ingr %d, i_new %d, i_mod %d, i_del%d, i_ren %d, i_typ %d, w_new %d, w_mod %d, w_del %d, w_ren %d,  w_typ %d\n",
+        path,
+        (flags & GIT_STATUS_IGNORED)>1,
+        (flags&GIT_STATUS_INDEX_NEW)>1,
+        (flags&GIT_STATUS_INDEX_MODIFIED)>1,
+        (flags&GIT_STATUS_INDEX_DELETED)>1,
+        (flags&GIT_STATUS_INDEX_RENAMED)>1,
+        (flags&GIT_STATUS_INDEX_TYPECHANGE)>1,
+        (flags&GIT_STATUS_WT_NEW)>1,
+        (flags&GIT_STATUS_WT_MODIFIED)>1,
+        (flags&GIT_STATUS_WT_DELETED)>1,
+        (flags&GIT_STATUS_WT_RENAMED)>1,
+        (flags&GIT_STATUS_WT_TYPECHANGE)>1
+    );*/ 
+
     if (flags & (GIT_STATUS_INDEX_NEW |
                  GIT_STATUS_INDEX_MODIFIED |
                  GIT_STATUS_INDEX_DELETED |
@@ -233,12 +248,17 @@ int main() {
     if (git_repository_open(&repo, (&buf)->ptr) != 0) {
         goto cleanup;
     }
+<<<<<<< HEAD:gitprompt.c
     /* check https://github.com/libgit2/libgit2/blob/master/tests/status/renames.c#L571 for list of options */
     opts.flags |= GIT_STATUS_OPT_RENAMES_HEAD_TO_INDEX;
     opts.flags |= GIT_STATUS_OPT_RENAMES_INDEX_TO_WORKDIR;
     opts.flags |= GIT_STATUS_OPT_RENAMES_FROM_REWRITES;
     opts.flags |= GIT_STATUS_OPT_INCLUDE_UNTRACKED;
     opts.flags |= GIT_STATUS_OPT_RECURSE_UNTRACKED_DIRS;
+=======
+
+    opts.flags |= GIT_STATUS_OPT_RENAMES_HEAD_TO_INDEX|GIT_STATUS_OPT_INCLUDE_UNTRACKED;
+>>>>>>> e8f61e0afa8c7f7f63358933ea44ab6c841dc554:git_status_prompt.c
     git_status_foreach_ext(repo, &opts, status_cb, &status);
 
     ahead_behind(repo, &ahead, &behind);
